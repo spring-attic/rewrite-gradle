@@ -1,0 +1,39 @@
+plugins {
+    id 'java-gradle-plugin'
+    id 'com.gradle.plugin-publish' version '0.9.4'
+    id 'nebula.plugin-plugin' version '4.24.0'
+    id 'nebula.kotlin' version '1.1.0'
+}
+
+repositories {
+    mavenCentral()
+}
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+dependencies {
+    compile 'com.netflix.devinsight.rewrite:rewrite-core:latest.release'
+
+    testCompile 'junit:junit:4.+'
+}
+
+pluginBundle {
+    website = 'https://github.com/spring-projects/rewrite-gradle'
+    vcsUrl = 'https://github.com/spring-projects/rewrite-gradle.git'
+    description = 'Pluggable and distributed refactoring tool for Java source code'
+
+    plugins {
+        sourceRefactor {
+            id = 'spring.rewrite'
+            displayName = 'Distributed Java source refactoring plugin'
+            description = 'Pluggable and distributed refactoring tool for Java source code'
+            tags = ['spring', 'rewrite', 'lint', 'refactor']
+        }
+    }
+
+    mavenCoordinates {
+        groupId = 'org.springframework'
+        artifactId = 'rewrite-gradle'
+    }
+}
