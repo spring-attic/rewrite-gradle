@@ -1,5 +1,9 @@
 # Rewrite plugin
 
+[![Build Status](https://travis-ci.org/spring-gradle-plugins/rewrite-gradle.svg?branch=master)](https://travis-ci.org/spring-gradle-plugins/rewrite-gradle)
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/spring-gradle-plugins/rewrite-gradle?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![Apache 2.0](https://img.shields.io/github/license/spring-gradle-plugins/rewrite-gradle.svg)](http://www.apache.org/licenses/LICENSE-2.0)
+
 A Gradle plugin that discovers and applies [Rewrite](https://github.com/Netflix-Skunkworks/rewrite)
 refactoring rules to your codebase.
 
