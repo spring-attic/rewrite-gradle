@@ -31,12 +31,9 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 class RewritePlugin : Plugin<Project> {
-    private val exemptTasks = listOf(
-            "help", "tasks", "dependencies", "dependencyInsight",
-            "components", "model", "projects", "properties", "wrapper",
-            "lintGradle", "fixGradleLint", "fixLintGradle")
-
     override fun apply(project: Project) {
+        project.extensions.create("rewrite", RewriteExtension::class.java)
+
         project.plugins.withType(JavaPlugin::class.java) {
             project.tasks.create("lintSource", RewriteTask::class.java)
             project.tasks.create("fixSourceLint", RewriteAndFixTask::class.java)

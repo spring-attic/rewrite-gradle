@@ -55,7 +55,7 @@ class RewritePluginTest {
         return GradleRunner.create()
                 .withDebug(true)
                 .withProjectDir(projectDir)
-                .withArguments(tasks.toList())
+                .withArguments(tasks.toList() + "-s")
                 .withPluginClasspath()
                 .run { if (fail) buildAndFail() else build() }
     }

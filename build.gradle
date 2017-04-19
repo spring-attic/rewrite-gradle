@@ -15,7 +15,6 @@ apply plugin: 'com.github.hierynomus.license'
 
 repositories {
     jcenter()
-    maven { url "http://dl.bintray.com/jetbrains/spek" }
 }
 
 group = 'io.spring'
