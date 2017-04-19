@@ -53,7 +53,7 @@ pluginBundle {
 bintray.pkg {
     repo = 'jars'
     userOrg = 'spring'
-    website = 'https://github.com/spring-gradle-plugins/rewrite-gradle'
+    websiteUrl = 'https://github.com/spring-gradle-plugins/rewrite-gradle'
     vcsUrl = 'https://github.com/spring-gradle-plugins/rewrite-gradle.git'
     issueTrackerUrl = 'https://github.com/spring-gradle-plugins/rewrite-gradle/issues'
     labels = ['gradle', 'spring', 'rewrite']
