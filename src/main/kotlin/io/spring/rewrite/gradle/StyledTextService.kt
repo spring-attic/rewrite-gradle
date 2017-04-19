@@ -1,4 +1,4 @@
-package com.netflix.rewrite.gradle
+package io.spring.rewrite.gradle
 
 import org.gradle.internal.service.ServiceRegistry
 

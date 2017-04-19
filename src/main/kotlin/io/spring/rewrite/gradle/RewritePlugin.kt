@@ -1,11 +1,8 @@
-package com.netflix.rewrite.gradle
+package io.spring.rewrite.gradle
 
-import com.netflix.rewrite.Rewrite
-import com.netflix.rewrite.ast.Tr
-import com.netflix.rewrite.auto.RewriteScanner
-import com.netflix.rewrite.auto.Rule
+import com.netflix.rewrite.auto.AutoRewrite
 import com.netflix.rewrite.parse.OracleJdkParser
-import com.netflix.rewrite.refactor.rule.JUnitToAssertJ
+import com.netflix.rewrite.refactor.Refactor
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
@@ -26,23 +23,20 @@ class RewritePlugin : Plugin<Project> {
     }
 }
 
-typealias RewriteStats = Map<Rewrite, Int>
+typealias RewriteStats = Map<AutoRewrite, Int>
 
 abstract class AbstractRewriteTask : DefaultTask() {
-    private val bundledRules = listOf(JUnitToAssertJ())
-            .map { it::class.annotations.filterIsInstance<Rewrite>().first() to it }
-            .toMap()
-
-    fun run(op: (Rule, Tr.CompilationUnit) -> Int): RewriteStats {
-        return project.convention.getPlugin(JavaPluginConvention::class.java).sourceSets.fold(mutableMapOf<Rewrite, Int>()) { stats, ss ->
-            val classpath = ss.compileClasspath.map(File::toPath)
-            val asts = OracleJdkParser(classpath).parse(ss.allJava.map(File::toPath))
-
-            val rules = RewriteScanner(classpath).rewriteRulesOnClasspath() + bundledRules
+    fun refactor(afterRefactor: (Refactor) -> Any?): RewriteStats {
+        return project.convention.getPlugin(JavaPluginConvention::class.java).sourceSets.fold(mutableMapOf<AutoRewrite, Int>()) { stats, ss ->
+            val asts = OracleJdkParser(ss.compileClasspath.map(File::toPath)).parse(ss.allJava.map(File::toPath))
+            val runners = RewriteScanner(ss.compileClasspath).rewriteRunnersOnClasspath()
 
             asts.forEach { cu ->
-                rules.forEach { rewrite, rule ->
-                    stats.merge(rewrite, op(rule, cu), Int::plus)
+                runners.forEach { runner ->
+                    val refactor = cu.refactor()
+                    runner.op.invoke(refactor)
+                    afterRefactor.invoke(refactor)
+                    stats.merge(runner.rule, refactor.stats().values.sum(), Int::plus)
                 }
             }
 
@@ -57,10 +51,7 @@ open class RewriteTask : AbstractRewriteTask() {
     fun refactorSourceStats() {
         val textOutput = StyledTextService(services)
 
-        val stats = run { rule, cu ->
-            val refactor = rule.refactor(cu)
-            refactor.stats().values.sum()
-        }
+        val stats = refactor {}
 
         if (stats.isNotEmpty()) {
             textOutput.withStyle(Styling.Red).println("\u2716 Your source code requires refactoring.")
@@ -70,7 +61,7 @@ open class RewriteTask : AbstractRewriteTask() {
             stats.entries.forEachIndexed { i, (rewrite, count) ->
                 textOutput.text("   ${i + 1}. ")
                 textOutput.withStyle(Styling.Bold).text(rewrite.value)
-                textOutput.println(" required $count changes to ${rewrite.description}")
+                textOutput.println(" requires $count changes to ${rewrite.description}")
             }
 
             throw GradleException("This project requires refactoring. Run ./gradlew fixSourceLint to automatically fix.")
@@ -84,29 +75,24 @@ open class RewriteAndFixTask : AbstractRewriteTask() {
     fun refactorSource() {
         val textOutput = StyledTextService(services)
 
-        val stats = run { rule, cu ->
-            val refactor = rule.refactor(cu)
-            val changes = refactor.stats().values.sum()
-            if (changes > 0) {
-                Files.newBufferedWriter(Paths.get(cu.sourcePath)).use {
+        val stats = refactor { refactor ->
+            if (refactor.stats().values.sum() > 0) {
+                Files.newBufferedWriter(Paths.get(refactor.original.sourcePath)).use {
                     it.write(refactor.fix().print())
                 }
             }
-            changes
         }
 
         if (stats.isNotEmpty()) {
             textOutput.withStyle(Styling.Red).text("\u2716 Your source code requires refactoring. ")
-            textOutput.text("Please run ")
+            textOutput.text("Please refactor ")
             textOutput.withStyle(Styling.Bold).text("git diff")
             textOutput.println(", review, and commit changes.")
             stats.entries.forEachIndexed { i, (rewrite, count) ->
                 textOutput.text("   ${i + 1}. ")
                 textOutput.withStyle(Styling.Bold).text(rewrite.value)
-                textOutput.println(" required $count changes to ${rewrite.description}")
+                textOutput.println(" requires $count changes to ${rewrite.description}")
             }
-
-            throw GradleException("This project contains uncommitted refactoring changes.")
         }
     }
 }
