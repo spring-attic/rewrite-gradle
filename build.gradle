@@ -1,6 +1,4 @@
 buildscript {
-    repositories { mavenCentral() }
-
     dependencies {
         classpath 'gradle.plugin.nl.javadude.gradle.plugins:license-gradle-plugin:0.13.1'
     }
@@ -17,6 +15,7 @@ apply plugin: 'com.github.hierynomus.license'
 
 repositories {
     jcenter()
+    maven { url "http://dl.bintray.com/jetbrains/spek" }
 }
 
 group = 'io.spring'
@@ -24,7 +23,7 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 dependencies {
-    compile 'com.netflix.devinsight.rewrite:rewrite-core:1.1.2'
+    compile 'com.netflix.devinsight.rewrite:rewrite-core:1.2.0'
     compile 'eu.infomas:annotation-detector:latest.release'
 
     testCompile 'junit:junit:4.+'

@@ -18,22 +18,36 @@ package io.spring.rewrite.gradle
 import com.netflix.rewrite.auto.AutoRewrite
 import com.netflix.rewrite.parse.OracleJdkParser
 import com.netflix.rewrite.refactor.Refactor
-import org.gradle.api.DefaultTask
-import org.gradle.api.GradleException
-import org.gradle.api.Plugin
-import org.gradle.api.Project
+import org.gradle.api.*
+import org.gradle.api.plugins.JavaBasePlugin
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.compile.AbstractCompile
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
 
 class RewritePlugin : Plugin<Project> {
+    private val exemptTasks = listOf(
+            "help", "tasks", "dependencies", "dependencyInsight",
+            "components", "model", "projects", "properties", "wrapper",
+            "lintGradle", "fixGradleLint", "fixLintGradle")
+
     override fun apply(project: Project) {
         project.plugins.withType(JavaPlugin::class.java) {
             project.tasks.create("lintSource", RewriteTask::class.java)
             project.tasks.create("fixSourceLint", RewriteAndFixTask::class.java)
+
+            project.plugins.withType(JavaBasePlugin::class.java) {
+                project.tasks.withType(AbstractCompile::class.java) { task ->
+                    // auto-linting does not force compilation
+                    project.rootProject.tasks.getByName("lintSource").dependsOn(task)
+                    project.rootProject.tasks.getByName("fixSourceLint").dependsOn(task)
+                }
+            }
         }
     }
 }
@@ -41,17 +55,19 @@ class RewritePlugin : Plugin<Project> {
 typealias RewriteStats = Map<AutoRewrite, Int>
 
 abstract class AbstractRewriteTask : DefaultTask() {
+    val extension: RewriteExtension = project.extensions.getByType(RewriteExtension::class.java)
+
     fun refactor(afterRefactor: (Refactor) -> Any?): RewriteStats {
         return project.convention.getPlugin(JavaPluginConvention::class.java).sourceSets.fold(mutableMapOf<AutoRewrite, Int>()) { stats, ss ->
             val asts = OracleJdkParser(ss.compileClasspath.map(File::toPath)).parse(ss.allJava.map(File::toPath))
             val runners = RewriteScanner(ss.compileClasspath).rewriteRunnersOnClasspath()
 
             asts.forEach { cu ->
-                runners.forEach { runner ->
+                runners.forEach { (rule, op) ->
                     val refactor = cu.refactor()
-                    runner.op.invoke(refactor)
+                    op.invoke(refactor)
                     afterRefactor.invoke(refactor)
-                    stats.merge(runner.rule, refactor.stats().values.sum(), Int::plus)
+                    stats.merge(rule, refactor.stats().values.sum(), Int::plus)
                 }
             }
 
@@ -79,7 +95,8 @@ open class RewriteTask : AbstractRewriteTask() {
                 textOutput.println(" requires $count changes to ${rewrite.description}")
             }
 
-            throw GradleException("This project requires refactoring. Run ./gradlew fixSourceLint to automatically fix.")
+            if(extension.failOnLint)
+                throw GradleException("This project requires refactoring. Run ./gradlew fixSourceLint to automatically fix.")
         }
     }
 }
@@ -100,9 +117,7 @@ open class RewriteAndFixTask : AbstractRewriteTask() {
 
         if (stats.isNotEmpty()) {
             textOutput.withStyle(Styling.Red).text("\u2716 Your source code requires refactoring. ")
-            textOutput.text("Please refactor ")
-            textOutput.withStyle(Styling.Bold).text("git diff")
-            textOutput.println(", review, and commit changes.")
+            textOutput.println("Please review changes and commit.")
             stats.entries.forEachIndexed { i, (rewrite, count) ->
                 textOutput.text("   ${i + 1}. ")
                 textOutput.withStyle(Styling.Bold).text(rewrite.value)

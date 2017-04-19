@@ -42,16 +42,18 @@ class RewriteScanner(classpath: Iterable<File>) {
 
             override fun reportMethodAnnotation(annotation: Class<out Annotation>?, className: String?, methodName: String?) {
                 val clazz = Class.forName(className, true, classLoader)
-                val method = clazz.getMethod(methodName, Refactor::class.java)
-
-                if(method == null || !Modifier.isStatic(method.modifiers)) {
-                    logger.warn("$className.$methodName will be ignored. To be useable, an @AutoRewrite method must be static and take a single Refactor argument.")
-                    return
-                }
-
-                scanners.add(AutoRewriteRunner(method.getAnnotation(AutoRewrite::class.java)) { r: Refactor ->
-                    method.invoke(clazz, r)
-                })
+                scanners.addAll(clazz.methods.filter { it.name == methodName && it.isAnnotationPresent(AutoRewrite::class.java) }
+                        .filter { method ->
+                            if(method == null || !Modifier.isStatic(method.modifiers) || method.parameterTypes.run { size != 1 || this[0] != Refactor::class.java }) {
+                                logger.warn("$className.$methodName will be ignored. To be useable, an @AutoRewrite method must be static and take a single Refactor argument.")
+                                false
+                            } else true
+                        }
+                        .map { method ->
+                            AutoRewriteRunner(method.getAnnotation(AutoRewrite::class.java)) { r: Refactor ->
+                                method.invoke(clazz, r)
+                            }
+                        })
             }
         }
 

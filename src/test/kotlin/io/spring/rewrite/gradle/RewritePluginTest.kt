@@ -17,8 +17,7 @@ package io.spring.rewrite.gradle
 
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -26,31 +25,46 @@ import org.junit.rules.TemporaryFolder
 import java.io.File
 
 class RewritePluginTest {
-
-    @JvmField @Rule
-    val temp = TemporaryFolder()
+    @JvmField @Rule val temp = TemporaryFolder()
 
     lateinit var projectDir: File
     lateinit var sourceFolder: File
     lateinit var testSourceFolder: File
-    val fixGuava = """
-            |import com.netflix.rewrite.refactor.Refactor;
-            |import com.netflix.rewrite.auto.AutoRewrite;
-            |
-            |public class FixGuava {
-            |    @AutoRewrite(value = "guava-deprecations", description = "fix Guava deprecations")
-            |    public static void fixIterators(Refactor refactor) {
-            |        refactor.changeMethodTargetToStatic(
-            |           refactor.getOriginal().findMethodCalls("com.google.common.collect.Iterators emptyIterator(..)"),
-            |           "java.util.Collections"
-            |        );
-            |    }
-            |}
-        """.trimMargin()
+
+    fun generateRule(className: String, signature: String): String {
+        val source = """
+                |import com.netflix.rewrite.refactor.Refactor;
+                |import com.netflix.rewrite.auto.AutoRewrite;
+                |
+                |public class $className {
+                |    @AutoRewrite(value = "guava-deprecations", description = "fix Guava deprecations")
+                |    $signature {
+                |        refactor.changeMethodTargetToStatic(
+                |           refactor.getOriginal().findMethodCalls("com.google.common.collect.Iterators emptyIterator(..)"),
+                |           "java.util.Collections"
+                |        );
+                |    }
+                |}
+            """.trimMargin()
+
+        File(sourceFolder, "$className.java").writeText(source)
+        return source
+    }
+
+    fun runTasks(vararg tasks: String, fail: Boolean = false): BuildResult {
+        return GradleRunner.create()
+                .withDebug(true)
+                .withProjectDir(projectDir)
+                .withArguments(tasks.toList())
+                .withPluginClasspath()
+                .run { if (fail) buildAndFail() else build() }
+    }
 
     @Before
     fun setup() {
         projectDir = temp.root
+        sourceFolder = File(projectDir, "src/main/java").apply { mkdirs() }
+        testSourceFolder = File(projectDir, "src/test/java").apply { mkdirs() }
 
         File(projectDir, "build.gradle").writeText("""
             plugins {
@@ -63,66 +77,48 @@ class RewritePluginTest {
             }
 
             dependencies {
-                compileOnly 'com.netflix.devinsight.rewrite:rewrite-core:1.1.2'
+                compileOnly 'com.netflix.devinsight.rewrite:rewrite-core:1.2.0'
                 compile 'com.google.guava:guava:18.0'
             }
         """)
 
-        sourceFolder = File(projectDir, "src/main/java")
-        sourceFolder.mkdirs()
-
-        testSourceFolder = File(projectDir, "src/test/java")
-        testSourceFolder.mkdirs()
+        File(testSourceFolder, "A.java").writeText("""
+                |import com.google.common.collect.Iterators;
+                |import java.util.Iterator;
+                |public class A {
+                |    Iterator<String> empty = Iterators.emptyIterator();
+                |}
+            """.trimMargin())
     }
 
     @Test
-    fun `@AutoRewrite must be on a static method`() {
-        File(sourceFolder, "FixGuava.java").writeText(fixGuava.replace("public static", "public"))
-        File(testSourceFolder, "A.java").writeText("class A {}")
+    fun `does not apply @AutoRewrite if the annotation is not on a static method`() {
+        generateRule("NonStatic", "public void fix(Refactor refactor)")
 
-        val output = runTasks(projectDir, "compileTestJava", "fixSourceLint").output
-        assertTrue(output, output.contains("FixGuava.fixIterators will be ignored"))
+        val output = runTasks("compileTestJava", "fixSourceLint").output
+        assertTrue(output, output.contains("NonStatic.fix will be ignored"))
     }
 
     @Test
-    fun `@AutoRewrite must be on a method that takes a single Refactor parameter`() {
-        File(sourceFolder, "FixGuava.java").writeText(fixGuava.replace("fixIterators(Refactor refactor)", "fixIterators()"))
-        File(testSourceFolder, "A.java").writeText("class A {}")
+    fun `does not apply @AutoRewrite if the annotation is on method that anything other than a single Refactor parameter`() {
+        generateRule("WrongNumberOfParams", "public static void fix(Refactor refactor, String extra)")
 
-        val output = runTasks(projectDir, "compileTestJava", "fixSourceLint").output
-        assertTrue(output, output.contains("FixGuava.fixIterators will be ignored"))
+        runTasks("compileTestJava", "fixSourceLint").output.let {
+            assertTrue(it, it.contains("WrongNumberOfParams.fix will be ignored"))
+        }
     }
 
     @Test
-    fun `fixSourceLint makes necessary changes to the codebase`() {
-        File(sourceFolder, "FixGuava.java").writeText(fixGuava)
+    fun `makes necessary changes to the codebase when fixSourceLint is ran`() {
+        generateRule("GoodRule", "public static void fix(Refactor refactor)")
 
-        val a = File(testSourceFolder, "A.java")
-        a.writeText("""
-            |import com.google.common.collect.Iterators;
-            |import java.util.Iterator;
-            |public class A {
-            |    Iterator<String> empty = Iterators.emptyIterator();
-            |}
-        """.trimMargin())
-
-        println(runTasks(projectDir, "compileTestJava", "fixSourceLint").output)
-
+        println(runTasks("compileTestJava", "fixSourceLint").output)
         assertEquals("""
             |import java.util.Collections;
             |import java.util.Iterator;
             |public class A {
             |    Iterator<String> empty = Collections.emptyIterator();
             |}
-        """.trimMargin(), a.readText())
-    }
-
-    private fun runTasks(projectDir: File?, vararg tasks: String): BuildResult {
-        return GradleRunner.create()
-                .withDebug(true)
-                .withProjectDir(projectDir)
-                .withArguments(tasks.toList())
-                .withPluginClasspath()
-                .build()
+        """.trimMargin(), File(testSourceFolder, "A.java").readText())
     }
 }
