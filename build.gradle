@@ -6,7 +6,6 @@ plugins {
 }
 
 repositories {
-    maven { url 'https://oss.jfrog.org/oss-snapshot-local' }
     jcenter()
 }
 
