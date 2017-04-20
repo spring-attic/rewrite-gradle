@@ -17,7 +17,7 @@ repositories {
     jcenter()
 }
 
-group = 'io.spring'
+group = 'io.spring.gradle'
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
