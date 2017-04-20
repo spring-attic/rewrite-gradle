@@ -14,7 +14,7 @@ refactoring rules to your codebase.
 
 ## Using the plugin
 
-The plugin is available in the Gradle Plugin Portal and can be applied like this:
+To apply the plugin:
 
 ```groovy
 buildscript {
