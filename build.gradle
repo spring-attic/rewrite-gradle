@@ -43,7 +43,7 @@ pluginBundle {
     }
 
     mavenCoordinates {
-        groupId = 'io.spring'
+        groupId = 'io.spring.gradle'
         artifactId = 'rewrite-gradle'
     }
 }
