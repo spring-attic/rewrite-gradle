@@ -17,9 +17,39 @@ refactoring rules to your codebase.
 The plugin is available in the Gradle Plugin Portal and can be applied like this:
 
 ```groovy
-plugins {
-    id "io.spring.rewrite" version "0.1.0"
+buildscript {
+   repositories { jcenter() }
+   dependencies { classpath 'io.spring.gradle:rewrite-gradle:latest.release' }
 }
+
+apply plugin 'spring.rewrite'
 ```
 
-If you prefer, the plugin is also available from Maven Central and JCenter.
+The Rewrite plugin scans each source set's classpath for methods marked with `@AutoRewrite` and applies their contents to the source set.
+
+To generate a report of what should be refactored in your project based on the `@AutoRewrite` methods found, run:
+
+`./gradlew lintSource`
+
+To automatically fix your code (preserving all of your beautiful code style), run:
+
+`./gradlew fixSourceLint && git diff`
+
+It is up to you to check the diff, run tests, and commit the resultant changes!
+
+## Creating an `@AutoRewrite` rule
+
+`@AutoRewrite` must be placed on a `public static` method that takes a single `Refactor` argument. The method may return anything you wish or nothing at all.
+
+Below is an example of a rule:
+
+```java
+@AutoRewrite(value = "reactor-mono-flatmap", description = "change flatMap to flatMapMany")
+public static void migrateMonoFlatMap(Refactor refactor) {
+ // a compilation unit representing the source file we are refactoring
+	Tr.CompilationUnit cu = refactor.getOriginal();
+
+	refactor.changeMethodName(cu.findMethodCalls("reactor.core.publisher.Mono flatMap(..)"),
+			"flatMapMany");
+}
+```
