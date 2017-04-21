@@ -18,6 +18,15 @@ repositories {
 }
 
 group = 'io.spring.gradle'
+description = 'Gradle plugin that automatically discovers Rewrite refactoring rules and applies them to your codebase'
+
+contacts {
+    'jkschneider@gmail.com' {
+        moniker 'Jon Schneider'
+        github 'jkschneider'
+    }
+}
+
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
