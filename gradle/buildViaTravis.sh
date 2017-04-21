@@ -18,7 +18,7 @@ elif [ "$TRAVIS_PULL_REQUEST" == "false" ] && [ "$TRAVIS_TAG" != "" ]; then
     ./gradlew clean build -Prelease.travisci=true -Prelease.useLastTag=true candidate $SWITCHES
     ;;
   *)
-    ./gradlew clean build -Prelease.travisci=true -Prelease.useLastTag=true final $SWITCHES -x publishPlugins
+    ./gradlew clean build -Prelease.travisci=true -Prelease.useLastTag=true final $SWITCHES
     ;;
   esac
 else
