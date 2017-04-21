@@ -18,11 +18,10 @@ To apply the plugin:
 
 ```groovy
 buildscript {
-   repositories { jcenter() }
    dependencies { classpath 'io.spring.gradle:rewrite-gradle:latest.release' }
 }
 
-apply plugin 'spring.rewrite'
+apply plugin 'io.spring.rewrite'
 ```
 
 The Rewrite plugin scans each source set's classpath for methods marked with `@AutoRewrite` and applies their contents to the source set.

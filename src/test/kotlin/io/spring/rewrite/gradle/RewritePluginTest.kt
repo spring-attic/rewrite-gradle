@@ -69,7 +69,7 @@ class RewritePluginTest {
         File(projectDir, "build.gradle").writeText("""
             plugins {
                 id 'java'
-                id 'spring.rewrite'
+                id 'io.spring.rewrite'
             }
 
             repositories {

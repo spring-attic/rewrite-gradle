@@ -44,7 +44,7 @@ pluginBundle {
 
     plugins {
         sourceRefactor {
-            id = 'spring.rewrite'
+            id = 'io.spring.rewrite'
             displayName = 'Distributed Java source refactoring plugin'
             description = 'Pluggable and distributed refactoring tool for Java source code'
             tags = ['spring', 'rewrite', 'lint', 'refactor']
