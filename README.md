@@ -14,15 +14,7 @@ refactoring rules to your codebase.
 
 ## Using the plugin
 
-To apply the plugin:
-
-```groovy
-buildscript {
-   dependencies { classpath 'io.spring.gradle:rewrite-gradle:latest.release' }
-}
-
-apply plugin 'io.spring.rewrite'
-```
+To apply the plugin, see the instructions on the [Gradle plugin portal](https://plugins.gradle.org/plugin/io.spring.rewrite).
 
 The Rewrite plugin scans each source set's classpath for methods marked with `@AutoRewrite` and applies their contents to the source set.
 
@@ -45,10 +37,10 @@ Below is an example of a rule:
 ```java
 @AutoRewrite(value = "reactor-mono-flatmap", description = "change flatMap to flatMapMany")
 public static void migrateMonoFlatMap(Refactor refactor) {
- // a compilation unit representing the source file we are refactoring
-	Tr.CompilationUnit cu = refactor.getOriginal();
+  // a compilation unit representing the source file we are refactoring
+  Tr.CompilationUnit cu = refactor.getOriginal();
 
-	refactor.changeMethodName(cu.findMethodCalls("reactor.core.publisher.Mono flatMap(..)"),
-			"flatMapMany");
+  refactor.changeMethodName(cu.findMethodCalls("reactor.core.publisher.Mono flatMap(..)"),
+    "flatMapMany");
 }
 ```
