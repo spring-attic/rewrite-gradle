@@ -31,7 +31,7 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 dependencies {
-    compile 'com.netflix.devinsight.rewrite:rewrite-core:1.2.0'
+    compile 'com.netflix.devinsight.rewrite:rewrite-core:1.3.0'
     compile 'eu.infomas:annotation-detector:latest.release'
 
     testCompile 'junit:junit:4.+'
