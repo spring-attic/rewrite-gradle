@@ -25,13 +25,15 @@ import org.junit.rules.TemporaryFolder
 import java.io.File
 
 class RewritePluginTest {
-    @JvmField @Rule val temp = TemporaryFolder()
+    @JvmField
+    @Rule
+    val temp = TemporaryFolder()
 
     lateinit var projectDir: File
     lateinit var sourceFolder: File
     lateinit var testSourceFolder: File
 
-    fun generateRule(className: String, signature: String): String {
+    fun generateRule(className: String, signature: String) {
         val source = """
                 |import com.netflix.rewrite.refactor.Refactor;
                 |import com.netflix.rewrite.auto.AutoRewrite;
@@ -46,9 +48,11 @@ class RewritePluginTest {
                 |    }
                 |}
             """.trimMargin()
+        generateRuleWithSource(className, source)
+    }
 
+    fun generateRuleWithSource(className: String, source: String) {
         File(sourceFolder, "$className.java").writeText(source)
-        return source
     }
 
     fun runTasks(vararg tasks: String, fail: Boolean = false): BuildResult {
@@ -83,10 +87,12 @@ class RewritePluginTest {
         """)
 
         File(testSourceFolder, "A.java").writeText("""
+                |import com.google.common.base.Optional;
                 |import com.google.common.collect.Iterators;
                 |import java.util.Iterator;
                 |public class A {
                 |    Iterator<String> empty = Iterators.emptyIterator();
+                |    Optional<String> optional = Optional.absent();
                 |}
             """.trimMargin())
     }
@@ -114,10 +120,43 @@ class RewritePluginTest {
 
         println(runTasks("compileTestJava", "fixSourceLint").output)
         assertEquals("""
+            |import com.google.common.base.Optional;
             |import java.util.Collections;
             |import java.util.Iterator;
             |public class A {
             |    Iterator<String> empty = Collections.emptyIterator();
+            |    Optional<String> optional = Optional.absent();
+            |}
+        """.trimMargin(), File(testSourceFolder, "A.java").readText())
+    }
+
+    @Test
+    fun `multiple rules can be applied at once`() {
+        generateRule("FirstRule", "public static void fix(Refactor refactor)")
+        generateRuleWithSource("SecondRule", """
+            |import com.netflix.rewrite.refactor.Refactor;
+            |import com.netflix.rewrite.auto.AutoRewrite;
+            |
+            |public class SecondRule {
+            |    @AutoRewrite(value = "guava-optional", description = "convert Guava optional to Java optional")
+            |    public static void fix(Refactor refactor) {
+            |        refactor.changeType("com.google.common.base.Optional", "java.util.Optional");
+            |        refactor.changeMethodName(
+            |               refactor.getOriginal().findMethodCalls("com.google.common.base.Optional absent()"),
+            |               "empty");
+            |    }
+            |}
+        """.trimMargin())
+
+        println(runTasks("compileTestJava", "fixSourceLint").output)
+        assertEquals("""
+            |import java.util.Collections;
+            |import java.util.Iterator;
+            |import java.util.Optional;
+            |
+            |public class A {
+            |    Iterator<String> empty = Collections.emptyIterator();
+            |    Optional optional = Optional.empty();
             |}
         """.trimMargin(), File(testSourceFolder, "A.java").readText())
     }
