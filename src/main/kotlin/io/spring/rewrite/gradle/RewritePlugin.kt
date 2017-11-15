@@ -60,12 +60,12 @@ abstract class AbstractRewriteTask : DefaultTask() {
             val runners = RewriteScanner(ss.compileClasspath).rewriteRunnersOnClasspath()
 
             asts.forEach { cu ->
+                val refactor = cu.refactor()
                 runners.forEach { (rule, op) ->
-                    val refactor = cu.refactor()
                     op.invoke(refactor)
-                    afterRefactor.invoke(refactor)
                     stats.merge(rule, refactor.stats().values.sum(), Int::plus)
                 }
+                afterRefactor.invoke(refactor)
             }
 
             stats
