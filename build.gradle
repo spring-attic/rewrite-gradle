@@ -75,3 +75,9 @@ license {
     sourceSets = project.sourceSets
     strictCheck = true
 }
+
+idea {
+    module {
+        testSourceDirs += file('src/test/kotlin')
+    }
+}
