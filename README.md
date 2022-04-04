@@ -1,3 +1,5 @@
+# rewrite-gradle is no longer actively maintained by VMware, Inc.
+
 # Rewrite plugin
 
 [![Build Status](https://travis-ci.org/spring-gradle-plugins/rewrite-gradle.svg?branch=master)](https://travis-ci.org/spring-gradle-plugins/rewrite-gradle)
